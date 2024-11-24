@@ -1,5 +1,4 @@
 // server.js
-
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";  // Correct import for socket.io
@@ -12,6 +11,7 @@ const server = http.createServer(app);
 
 // Initialize Socket.IO with the HTTP server
 const io = new Server(server);
+
 
 // Serve static files (the front-end) from the "public" folder
 app.use(express.static("public"));
