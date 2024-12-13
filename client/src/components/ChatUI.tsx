@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Send,
   Paperclip,
@@ -7,7 +7,9 @@ import {
   Video,
   Search,
 } from "lucide-react";
-
+import { ConnectionState } from "./ConnectionState";
+import { ConnectionManager } from "./ConnectionManager";
+import { socket } from "../utils/socket";
 const ChatUI = () => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([
@@ -31,20 +33,61 @@ const ChatUI = () => {
     },
   ]);
 
-  const handleSend = () => {
-    if (message.trim()) {
+  const [isConnected, setIsConnected] = useState(socket.connected);
+
+  useEffect(() => {
+    function onConnect() {
+      setIsConnected(true);
+    }
+
+    function onDisconnect() {
+      setIsConnected(false);
+    }
+
+    function onReceive(message) {
       setMessages([
         ...messages,
         {
           id: messages.length + 1,
-          text: message,
-          sender: "me",
+          text: message.text,
+          sender: message.senderId === socket.id ? "me" : "them",
           time: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           }),
         },
       ]);
+      console.log(messages);
+    }
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("receiveMessage", onReceive);
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("receiveMessage", onReceive);
+    };
+  }, []);
+
+  const handleSend = () => {
+    if (message.trim()) {
+      // setMessages([
+      //   ...messages,
+      //   {
+      //     id: messages.length + 1,
+      //     text: message,
+      //     sender: "me",
+      //     time: new Date().toLocaleTimeString([], {
+      //       hour: "2-digit",
+      //       minute: "2-digit",
+      //     }),
+      //   },
+      // ]);
+      socket.timeout(5000).emit("message", message, () => {
+        // setIsLoading(false);
+      });
       setMessage("");
     }
   };
@@ -67,6 +110,8 @@ const ChatUI = () => {
           <div>
             <h1 className="font-semibold">John Doe</h1>
             <p className="text-sm">Online</p>
+            <ConnectionState isConnected={isConnected} />
+            <ConnectionManager />
           </div>
         </div>
         <div className="flex items-center space-x-4">
